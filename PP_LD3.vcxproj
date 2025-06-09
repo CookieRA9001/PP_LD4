@@ -109,7 +109,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>C:\OpenCL-SDK-v2024.10.24-Win-x64\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\OpenCL-SDK-v2024.10.24-Win-x64\include;C:\Users\ralfs\Documents\MyStuff\RTU\Prog\PP_LD4\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -135,10 +135,13 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="PP_LD3.cpp" />
+    <ClCompile Include="PP_LD4.cpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include="renderer.cl" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="include\PNG.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

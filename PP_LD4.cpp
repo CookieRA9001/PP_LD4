@@ -25,12 +25,7 @@ cl_float4* cpu_output;
 Buffer cl_output;
 
 // CONFIGURATION
-#define IMG_WIDTH 1920
-#define IMG_HEIGHT 1080
-#define LOCAL_WORK_SIZE 64
-
-int width, height;
-string image_name = "image.ppm";
+#define IMG_NAME "cat.png"
 
 void setup_opencl() {
 	std::cout << "Setting up OpenCL...\n";
@@ -59,33 +54,37 @@ void setup_opencl() {
 }
 
 void render_image(
-	float p, float q
+	string image_name, float p, float q
 ) {
+	std::cout << "Reading image data...\n";
+	PNG img(image_name);
+	unsigned long long width = img.w;
+	unsigned long long height = img.h;
+	const cl::ImageFormat format(CL_RGBA, CL_UNSIGNED_INT8);
+	cl::Image2D in(context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, format, width, height, 0, &img.data[0]);
+	img.Free();
+	cl::Image2D out(context, CL_MEM_WRITE_ONLY, format, width, height, 0, NULL);
+
 	std::cout << "Editing...\n";
-	cpu_output = new cl_float3[IMG_WIDTH * IMG_HEIGHT];
-	kernel.setArg(0, cl_output);
-	kernel.setArg(1, p);
-	kernel.setArg(2, q);
-	queue.enqueueNDRangeKernel(kernel, NullRange, IMG_WIDTH * IMG_HEIGHT, LOCAL_WORK_SIZE);
-	queue.enqueueReadBuffer(cl_output, CL_TRUE, 0, IMG_WIDTH * IMG_HEIGHT * sizeof(cl_float3), cpu_output);
+	kernel.setArg(0, in);
+	kernel.setArg(1, out);
+	kernel.setArg(2, p);
+	kernel.setArg(3, q);
+	queue.enqueueNDRangeKernel(kernel, NullRange, cl::NDRange(width, height), cl::NullRange);
 	queue.finish();
-}
 
-inline float clamp(float x) { return x < 0.0f ? 0.0f : x > 1.0f ? 1.0f : x; }
-inline int toInt(float x) { return int(clamp(x) * 255 + .5); }
-void saveImage(string name) { // save image to file .PPM
-	std::cout << "Saving image...\n";
-	name = name + ".ppm";
-	FILE* f = fopen(name.c_str(), "w");
-	if (f == 0) {
-		perror("Failed to open file");
-		return;
-	}
-	fprintf(f, "P3\n%d %d\n%d\n", IMG_WIDTH, IMG_HEIGHT, 255);
+	cl::detail::size_t_array origin {0,0,0};
+	cl::detail::size_t_array size {width, height, 1};
+	PNG outPng;
+	outPng.Create(width, height);
+	auto tmp = new unsigned char[width * height * 4];
 
-	for (int i = 0; i < IMG_WIDTH * IMG_HEIGHT; i++) {
-		fprintf(f, "%d %d %d ", toInt(cpu_output[i].s[0]), toInt(cpu_output[i].s[1]), toInt(cpu_output[i].s[2]));
-	}
+	queue.enqueueReadImage(out, CL_TRUE, origin, size, 0, 0, tmp, NULL, NULL);
+
+	std::copy(&tmp[0], &tmp[width * height * 4], std::back_inserter(outPng.data));
+	outPng.Save("res.png");
+	outPng.Free();
+	delete[] tmp;
 }
 
 int main() {
@@ -99,9 +98,6 @@ int main() {
 	long long elapsed = 0;
 	std::chrono::system_clock::time_point start, end;
 	setup_opencl();
-
-	std::cout << "Reading image data...\n";
-
 
 	float p = 0.0f, q = 0.0f;
 	bool loop = true;
@@ -119,11 +115,10 @@ int main() {
 	}
 
 	start = std::chrono::system_clock::now();
-	render_image(p, q);
+	render_image(IMG_NAME, p, q);
 	std::cout << "Image edited!\n";
 	end = std::chrono::system_clock::now();
 	elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
 	std::cout << "Elapsed time = " << elapsed << "ms\n";
-	saveImage("res_image");
 }
 
